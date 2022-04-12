@@ -1,0 +1,81 @@
+import React from 'react';
+import {
+    API_URL,
+    API_KEY,
+    IMAGE_BASE_URL,
+    BACKDROP_SIZE,
+    POSTER_SIZE
+} from '../../config';
+import HeroImage from '../elements/HeroImage/HeroImage';
+import SearchBar from '../elements/SearchBar/SearchBar';
+import FourColGrid from '../elements/FourColGrid/FourColGrid';
+import MovieThumb from '../elements/MovieThumb/MovieThumb';
+import LoadMoreBtn from '../elements/LoadMoreBtn/LoadMoreBtn';
+import Spinner from '../elements/Spinner/Spinner';
+
+import { useFetchMovies } from './customHook';
+
+import './Home.css';
+
+const Home = () => {
+    const [{ state, isLoading }, fetchMovies] = useFetchMovies();
+
+    const searchEP = "search/movie";
+    const popularEP = "movie/popular";
+
+    const searchItems = searchTerm => {
+
+        let endpoint = `${API_URL}${searchEP}?api_key=${API_KEY}&query=${searchTerm}`;
+        if (!searchTerm) endpoint = `${API_URL}${popularEP}?api_key=${API_KEY}`
+        console.log(endpoint, searchTerm);
+        fetchMovies(endpoint);
+    }
+
+    const loadMoreItems = () => {
+        const { searchTerm, currentPage } = state;
+
+        let endpoint = `${API_URL}${searchEP}?api_key=${API_KEY}&language=en-US&page=${currentPage + 1}&query=${searchTerm}`
+
+        if (!searchTerm) endpoint = `${API_URL}${popularEP}?api_key=${API_KEY}&language=en-US&page=${currentPage + 1}&query=${searchTerm}`
+
+        fetchMovies(endpoint);
+    }
+
+    return (
+        <div className="rmdb-home">
+            {state.heroImage && !state.searchTerm ?
+                <div>
+                    <HeroImage
+                        image={`${IMAGE_BASE_URL}${BACKDROP_SIZE}${state.heroImage.backdrop_path}`}
+                        title={state.heroImage.original_title}
+                        text={state.heroImage.overview}
+                    />
+
+                </div> : null}
+            <SearchBar callback={searchItems} />
+            <div className="rmdb-home-grid">
+                <FourColGrid
+                    header={state.searchTerm ? 'Search Result' : 'Popular Movies'}
+                    loading={isLoading}
+                >
+                    {state.movies.map((element, i) => {
+                        return <MovieThumb
+                            key={i}
+                            clickable={true}
+                            image={element.poster_path ? `${IMAGE_BASE_URL}${POSTER_SIZE}${element.poster_path}` : './images/no_image.jpg'}
+                            movieId={element.id}
+                            movieName={element.original_title}
+                        />
+                    })}
+                </FourColGrid>
+                {isLoading ? <Spinner /> : null}
+                {(state.currentPage < state.totalPages && !isLoading) ?
+                    <LoadMoreBtn text="Load More" onClick={loadMoreItems} />
+                    : null}
+            </div>
+        </div>
+    )
+}
+
+
+export default Home;
